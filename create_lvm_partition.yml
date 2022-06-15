@@ -1,0 +1,47 @@
+---
+- name: playbook for creating a lvm partition
+  hosts: serveurs
+  tasks:
+    - name: create partition
+      parted:
+        device: "{{ disk_name }}"
+        label: gpt
+        number: 1
+        flags: [ lvm ]
+        state: present
+
+    - name: Install lvm2 dependency
+      package:
+        name: lvm2
+        state: present
+
+    - name: creating volume group
+      lvg:
+          vg: "{{ vg_name }}"
+          pvs: "{{ disk_name }}1"
+          pesize: 16
+
+    - name: creating logical volume
+      lvol:
+          vg: "{{ vg_name }}"
+          lv:  "{{ lv_name }}"
+          size: 1g
+          force: yes
+
+    - name: Create directory data1 if does not exist
+      file:
+        path: /data1
+        state: directory
+        mode: '0755'
+
+    - name: format the xfs filesystem
+      filesystem:
+        fstype: xfs
+        dev: "/dev/{{ vg_name }}/{{ lv_name }}"
+
+    - name: mount the lv on /data1
+      mount:
+        path: /data1
+        src: "/dev/{{ vg_name }}/{{ lv_name }}"
+        fstype: xfs
+        state: mounted

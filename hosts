@@ -1,0 +1,15 @@
+[nfs_serveur]
+10.1.1.11
+
+[serveurs]
+10.1.1.11
+10.1.1.12
+
+[all:vars]
+ansible_connection=ssh
+ansible_ssh_user=admin
+ansible_ssh_pass=1234
+disk_name=/dev/sdb
+vg_name=vg01
+lv_name=lv01
+gluster_vol_name=vol01

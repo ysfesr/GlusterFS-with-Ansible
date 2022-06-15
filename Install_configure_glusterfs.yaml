@@ -1,0 +1,52 @@
+---
+- name: Install and configure GlusterFS 8
+  hosts: serveurs
+  tasks:
+    - name: "install centos-release-gluster8"
+      package:
+        name: centos-release-gluster8
+        state: present
+
+    - name: "install glusterfs-server"
+      package:
+        name: glusterfs-server
+        state: present
+
+    - name: "open glusterfs port"
+      firewalld:
+        service: glusterfs
+        permanent: true
+        state: enabled
+      register: firewall_setting
+
+    - name: "restart the firewalld service to load in the firewall changes"
+      service:
+        name: firewalld
+        state: restarted
+      when: firewall_setting.changed
+
+    - name: "enable gluster service"
+      service:
+        name: glusterd
+        enabled: yes
+        state: started
+
+    - name: "create a tsp"
+      gluster_peer:
+        state: present
+        nodes: "{{groups['serveurs']|join(',')}}"
+      run_once: true
+
+
+    - name: "create gluster volume"
+      gluster_volume:
+        state: present
+        name: "{{ gluster_vol_name }}"
+        brick: /data1
+        replicas: 2
+        cluster: "{{groups['serveurs']|join(',')}}"
+      run_once: true
+    - name: start gluster volume
+      gluster_volume:
+        state: started
+        name: "{{ gluster_vol_name }}"

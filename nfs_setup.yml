@@ -1,0 +1,48 @@
+---
+- name: playbook for creating a lvm partition
+  hosts: nfs_serveur
+
+  tasks:
+    - name: "create dir for nfs share point"
+      file:
+        path: /nfs_share
+        state: directory
+    - name: "mount glusterfs"
+      mount:
+        path: /nfs_share
+        src: "{{ groups['nfs_serveur'] }}:/{{ gluster_vol_name }}"
+        fstype: glusterfs
+        state: mounted
+
+    - name: NFS server installed
+      yum:
+        name:
+          - nfs-utils
+          - nfs4-acl-tools
+        state: present
+
+    - name: share in /etc/exports file
+      lineinfile:
+        path: /etc/exports
+        state: present
+        line: "/nfs_share 10.1.1.0/24(fsid=22,rw,sync,root_squash)"
+
+    - name: restart NFS server
+      service:
+        name: nfs-server
+        state: restarted
+        enabled: true
+
+    - name: export share
+      command: "exportfs -rav"
+
+    - name: firewall enabled
+      firewalld:
+        service: "{{ item }}"
+        state: enabled
+        permanent: true
+        immediate: true
+      with_items:
+        - nfs
+        - rpc-bind
+        - mountd
